@@ -71,7 +71,6 @@ namespace Clicker
         {
             if (clickParticles != null)
             {
-                clickParticles.transform.position = clickButton.transform.position;
                 clickParticles.Play();
             }
         }
