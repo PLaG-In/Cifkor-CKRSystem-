@@ -1,4 +1,5 @@
 using System;
+using TabSystem;
 using UniRx;
 using Zenject;
 
@@ -9,30 +10,43 @@ namespace Clicker
         private readonly ClickerModel _model;
         private readonly ClickerView _view;
         private readonly ClickerConfig _config;
+        private readonly TabModel _tabModel;
         private readonly CompositeDisposable _disposables = new();
 
-        public ClickerPresenter(ClickerModel model, ClickerView view, ClickerConfig config)
+        private bool _isActive;
+
+        public ClickerPresenter(
+            ClickerModel model,
+            ClickerView view,
+            ClickerConfig config,
+            TabModel tabModel)
         {
             _model = model;
             _view = view;
             _config = config;
+            _tabModel = tabModel;
         }
 
         public void Initialize()
         {
-            // Подписка на кнопку
             _view.OnClickButtonPressed += OnClickPressed;
 
-            // Отображение начальных значений
-            _model.Currency.Subscribe(v => _view.SetCurrency(v)).AddTo(_disposables);
-            _model.Energy.Subscribe(v => _view.SetEnergy(v, _config.maxEnergy)).AddTo(_disposables);
-
-            // Авто-сбор каждые N секунд
-            Observable.Interval(TimeSpan.FromSeconds(_config.autoCollectInterval))
-                .Subscribe(_ => OnAutoCollect())
+            _model.Currency
+                .Subscribe(v => _view.SetCurrency(v))
                 .AddTo(_disposables);
 
-            // Восполнение энергии каждые N секунд
+            _model.Energy
+                .Subscribe(v => _view.SetEnergy(v, _config.maxEnergy))
+                .AddTo(_disposables);
+            
+            _tabModel.ActiveTab
+                .Subscribe(tab => _isActive = tab == TabType.Clicker)
+                .AddTo(_disposables);
+            
+            Observable.Interval(TimeSpan.FromSeconds(_config.autoCollectInterval))
+                .Subscribe(_ => { if (_isActive) OnAutoCollect(); })
+                .AddTo(_disposables);
+            
             Observable.Interval(TimeSpan.FromSeconds(_config.energyRechargeInterval))
                 .Subscribe(_ => _model.RechargeEnergy())
                 .AddTo(_disposables);

@@ -9,10 +9,10 @@ namespace Dogs
 {
     public class DogBreedsPresenter : IInitializable, IDisposable
     {
-        private const string BREEDS_URL = "https://dogapi.dog/api/v2/breeds?page[size]=10";
+        private const string BREEDS_URL      = "https://dogapi.dog/api/v2/breeds?page[size]=10";
         private const string BREED_DETAIL_URL = "https://dogapi.dog/api/v2/breeds/{0}";
-        private const string TAG_LIST = "dogs_list";
-        private const string TAG_DETAIL = "dogs_detail";
+        private const string TAG_LIST        = "dogs_list";
+        private const string TAG_DETAIL      = "dogs_detail";
 
         private readonly DogBreedsModel _model;
         private readonly DogBreedsView _view;
@@ -39,33 +39,27 @@ namespace Dogs
             _tabModel.ActiveTab
                 .Subscribe(OnTabChanged)
                 .AddTo(_disposables);
+
+            _model.IsLoadingList
+                .Subscribe(loading => { if (loading) _view.ShowListLoading(); })
+                .AddTo(_disposables);
             
-            _model.IsLoadingList.Subscribe(loading =>
-            {
-                if (loading) _view.ShowListLoading();
-            }).AddTo(_disposables);
+            _model.LoadingBreedId
+                .Subscribe(id => _view.SetBreedLoading(id))
+                .AddTo(_disposables);
 
-            _model.IsLoadingDetail.Subscribe(loading =>
-            {
-                if (loading) _view.ShowDetailLoading();
-                else _view.HideDetailLoading();
-            }).AddTo(_disposables);
+            _model.Breeds
+                .Subscribe(breeds => { if (breeds != null) _view.ShowBreeds(breeds); })
+                .AddTo(_disposables);
 
-            _model.Breeds.Subscribe(breeds =>
-            {
-                if (breeds != null) _view.ShowBreeds(breeds);
-            }).AddTo(_disposables);
+            _model.SelectedBreed
+                .Subscribe(breed => { if (breed != null) _view.ShowBreedPopup(breed); })
+                .AddTo(_disposables);
 
-            _model.SelectedBreed.Subscribe(breed =>
-            {
-                if (breed != null) _view.ShowBreedPopup(breed);
-            }).AddTo(_disposables);
+            _model.Error
+                .Subscribe(err => { if (!string.IsNullOrEmpty(err)) _view.ShowError(err); })
+                .AddTo(_disposables);
 
-            _model.Error.Subscribe(err =>
-            {
-                if (!string.IsNullOrEmpty(err)) _view.ShowError(err);
-            }).AddTo(_disposables);
-            
             _view.OnBreedSelected += OnBreedSelected;
         }
 
@@ -99,7 +93,7 @@ namespace Dogs
                 deserializer: JsonUtility.FromJson<BreedsResponse>,
                 onSuccess: data =>
                 {
-                    if (data?.data != null && data.data.Count > 0)
+                    if (data?.data is { Count: > 0 })
                     {
                         _listLoaded = true;
                         _model.SetBreeds(data.data);
@@ -122,13 +116,11 @@ namespace Dogs
             _queue.CancelByTag(TAG_DETAIL);
             _model.ClearSelectedBreed();
 
-            _model.SetLoadingDetail(true);
-
-            var url = string.Format(BREED_DETAIL_URL, breed.id);
+            _model.SetLoadingBreed(breed.id);
 
             var request = new WebRequest<BreedDetailResponse>(
                 id: $"{TAG_DETAIL}_{breed.id}_{DateTime.UtcNow.Ticks}",
-                url: url,
+                url: string.Format(BREED_DETAIL_URL, breed.id),
                 deserializer: JsonUtility.FromJson<BreedDetailResponse>,
                 onSuccess: data =>
                 {

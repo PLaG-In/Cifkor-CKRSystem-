@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Dogs
 {
@@ -12,12 +12,9 @@ namespace Dogs
         [SerializeField] private BreedItemView breedItemPrefab;
         [SerializeField] private GameObject listLoadingIndicator;
 
-        [Header("Detail Loading")]
-        [SerializeField] private GameObject detailLoadingIndicator;
-
         [Header("Error")]
         [SerializeField] private GameObject errorPanel;
-        [SerializeField] private TMPro.TextMeshProUGUI errorText;
+        [SerializeField] private TextMeshProUGUI errorText;
 
         [Header("Popup")]
         [SerializeField] private BreedPopupView popup;
@@ -25,6 +22,7 @@ namespace Dogs
         public event Action<BreedData> OnBreedSelected;
 
         private readonly List<BreedItemView> _spawnedItems = new();
+        
 
         public void ShowListLoading()
         {
@@ -38,14 +36,11 @@ namespace Dogs
             listLoadingIndicator.SetActive(false);
             errorPanel.SetActive(false);
             listContainer.gameObject.SetActive(true);
-            
-            foreach (var item in _spawnedItems)
-            {
-                Destroy(item.gameObject);
-            }
 
+            foreach (var item in _spawnedItems)
+                Destroy(item.gameObject);
             _spawnedItems.Clear();
-            
+
             int count = Mathf.Min(breeds.Count, 10);
             for (int i = 0; i < count; i++)
             {
@@ -62,21 +57,21 @@ namespace Dogs
             listContainer.gameObject.SetActive(false);
             errorPanel.SetActive(true);
             errorText.text = message;
-        }
-
-        public void ShowDetailLoading()
-        {
-            detailLoadingIndicator.SetActive(true);
-        }
-
-        public void HideDetailLoading()
-        {
-            detailLoadingIndicator.SetActive(false);
+            
+            SetBreedLoading(null);
         }
         
+        public void SetBreedLoading(string breedId)
+        {
+            foreach (var item in _spawnedItems)
+            {
+                item.SetLoading(item.BreedId == breedId && breedId != null);
+            }
+        }
+
         public void ShowBreedPopup(BreedData breed)
         {
-            HideDetailLoading();
+            SetBreedLoading(null);
             popup.Show(breed);
         }
     }
